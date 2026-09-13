@@ -7,19 +7,20 @@ A minimal LangChain agent that:
 3. Uses a DuckDuckGo search tool for anything it doesn't know / for finding
    product links to buy.
 
+Built with the new LangChain v1 `create_agent` API (runs on LangGraph under
+the hood) and plain `@tool`-decorated functions.
+
 This file only defines the agent. FastAPI wraps it in app.py.
 """
 
-import os
 from dotenv import load_dotenv
 
 from langchain_groq import ChatGroq
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
 from ddgs import DDGS
-from langchain.tools import Tool
-from langchain.agents import create_tool_calling_agent, AgentExecutor
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.tools import tool
+from langchain.agents import create_agent
 
 load_dotenv()
 
@@ -33,30 +34,29 @@ vectordb = Chroma(persist_directory=DB_DIR, embedding_function=embeddings)
 retriever = vectordb.as_retriever(search_kwargs={"k": 3})
 
 
-def rag_lookup(query: str) -> str:
-    """Search the local Ayurvedic documents for relevant remedies."""
+@tool
+def ayurvedic_knowledge_base(query: str) -> str:
+    """Search the local Ayurvedic documents for home remedies, herbs
+    (like tulsi, ashwagandha, turmeric), and dosha-related advice.
+    Use this FIRST for any Ayurveda-related question.
+    Input should be a short search phrase, e.g. 'remedy for cough'.
+    """
     results = retriever.invoke(query)
     if not results:
         return "No matching Ayurvedic document found."
     return "\n\n---\n\n".join(doc.page_content for doc in results)
 
 
-rag_tool = Tool(
-    name="ayurvedic_knowledge_base",
-    func=rag_lookup,
-    description=(
-        "Use this tool FIRST for any question about Ayurvedic remedies, "
-        "herbs (like tulsi, ashwagandha, turmeric), home remedies, or "
-        "dosha-related advice. Input should be a short search phrase, "
-        "e.g. 'remedy for cough' or 'ashwagandha benefits'."
-    ),
-)
-
 # ---------------------------------------------------------------------
 # 2. Set up the DuckDuckGo search tool (for general web info + product links)
 # ---------------------------------------------------------------------
+@tool
 def web_search(query: str) -> str:
-    """Search the web using DuckDuckGo and return top results with links."""
+    """Search the web using DuckDuckGo. Useful for general health/lifestyle
+    questions not covered by the Ayurvedic knowledge base, current
+    information, and finding real product links when the user wants to
+    buy something (e.g. 'buy ashwagandha powder online').
+    """
     ddgs = DDGS()
     results = list(ddgs.text(query, max_results=5))
     if not results:
@@ -66,22 +66,10 @@ def web_search(query: str) -> str:
     )
 
 
-search_tool = Tool(
-    name="web_search",
-    func=web_search,
-    description=(
-        "Use this tool to search the internet. Useful for: general health "
-        "or lifestyle questions not covered by the Ayurvedic knowledge "
-        "base, current information, and finding real product links when "
-        "the user wants to buy something (e.g. 'buy ashwagandha powder "
-        "online')."
-    ),
-)
-
-tools = [rag_tool, search_tool]
+tools = [ayurvedic_knowledge_base, web_search]
 
 # ---------------------------------------------------------------------
-# 3. Set up the LLM and the agent prompt
+# 3. Set up the LLM and the agent
 # ---------------------------------------------------------------------
 llm = ChatGroq(model="openai/gpt-oss-20b", temperature=0.3)
 
@@ -101,26 +89,17 @@ Guidelines:
 - You are not a licensed doctor. Make this clear when giving medical-adjacent advice.
 """
 
-prompt = ChatPromptTemplate.from_messages(
-    [
-        ("system", SYSTEM_PROMPT),
-        MessagesPlaceholder(variable_name="chat_history", optional=True),
-        ("human", "{input}"),
-        MessagesPlaceholder(variable_name="agent_scratchpad"),
-    ]
+agent = create_agent(
+    model=llm,
+    tools=tools,
+    system_prompt=SYSTEM_PROMPT,
 )
-
-# ---------------------------------------------------------------------
-# 4. Build the agent + executor
-# ---------------------------------------------------------------------
-agent = create_tool_calling_agent(llm, tools, prompt)
-agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
 
 
 def ask_agent(question: str) -> str:
     """Simple helper: send a question to the agent, get back the answer text."""
-    result = agent_executor.invoke({"input": question})
-    return result["output"]
+    result = agent.invoke({"messages": [{"role": "user", "content": question}]})
+    return result["messages"][-1].content
 
 
 # Quick manual test: `python agent.py`
