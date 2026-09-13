@@ -1,5 +1,8 @@
 .env
-chroma_db/
-__pycache__/
-venv/
+.git
+.gitignore
+__pycache__
 *.pyc
+chroma_db
+.venv
+venv
