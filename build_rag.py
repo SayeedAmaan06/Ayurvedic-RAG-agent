@@ -15,7 +15,7 @@ import os
 from dotenv import load_dotenv
 from langchain_community.document_loaders import DirectoryLoader, TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_community.embeddings import FastEmbedEmbeddings
 from langchain_chroma import Chroma
 
 load_dotenv()
@@ -35,8 +35,9 @@ def main():
     chunks = splitter.split_documents(docs)
     print(f"Split into {len(chunks)} chunks")
 
-    # Free, local embedding model (runs on CPU, no API key needed)
-    embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+    # Free, local, no-PyTorch embedding model (keeps memory usage low,
+    # important for free-tier hosting on Render).
+    embeddings = FastEmbedEmbeddings(model_name="BAAI/bge-small-en-v1.5")
 
     # This creates (or overwrites) the local vector store on disk
     vectordb = Chroma.from_documents(
