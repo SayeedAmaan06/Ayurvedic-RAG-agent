@@ -83,7 +83,7 @@ tools = [rag_tool, search_tool]
 # ---------------------------------------------------------------------
 # 3. Set up the LLM and the agent prompt
 # ---------------------------------------------------------------------
-llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.3)
+llm = ChatGroq(model="openai/gpt-oss-20b", temperature=0.3)
 
 SYSTEM_PROMPT = """You are an Ayurvedic home-remedy and healthy-living assistant.
 
