@@ -16,7 +16,7 @@ This file only defines the agent. FastAPI wraps it in app.py.
 from dotenv import load_dotenv
 
 from langchain_groq import ChatGroq
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_community.embeddings import FastEmbedEmbeddings
 from langchain_chroma import Chroma
 from ddgs import DDGS
 from langchain_core.tools import tool
@@ -29,7 +29,10 @@ DB_DIR = "chroma_db"
 # ---------------------------------------------------------------------
 # 1. Set up the RAG retriever (reads the vector store built by build_rag.py)
 # ---------------------------------------------------------------------
-embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+# FastEmbed is used instead of sentence-transformers because it has no
+# PyTorch dependency, keeping memory usage low (important for free-tier
+# hosting on Render, which caps at 512MB RAM).
+embeddings = FastEmbedEmbeddings(model_name="BAAI/bge-small-en-v1.5")
 vectordb = Chroma(persist_directory=DB_DIR, embedding_function=embeddings)
 retriever = vectordb.as_retriever(search_kwargs={"k": 3})
 
