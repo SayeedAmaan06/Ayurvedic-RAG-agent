@@ -53,23 +53,19 @@ def ayurvedic_knowledge_base(query: str) -> str:
 # ---------------------------------------------------------------------
 # 2. Set up the DuckDuckGo search tool (for general web info + product links)
 # ---------------------------------------------------------------------
-@tool
-def web_search(query: str) -> str:
-    """Search the web using DuckDuckGo. Useful for general health/lifestyle
-    questions not covered by the Ayurvedic knowledge base, current
-    information, and finding real product links when the user wants to
-    buy something (e.g. 'buy ashwagandha powder online').
-    """
-    ddgs = DuckDuckGoSearchRun()
-    results = list(ddgs.text(query, max_results=5))
-    if not results:
-        return "No search results found."
-    return "\n\n".join(
-        f"{r['title']}\n{r['href']}\n{r['body']}" for r in results
-    )
+# DuckDuckGoSearchRun is already a ready-made LangChain tool - no need to
+# wrap it in a custom @tool function.
+search_tool = DuckDuckGoSearchRun(
+    name="web_search",
+    description=(
+        "Search the web using DuckDuckGo. Useful for general health/"
+        "lifestyle questions not covered by the Ayurvedic knowledge base, "
+        "current information, and finding real product links when the "
+        "user wants to buy something (e.g. 'buy ashwagandha powder online')."
+    ),
+)
 
-
-tools = [ayurvedic_knowledge_base, web_search]
+tools = [ayurvedic_knowledge_base, search_tool]
 
 # ---------------------------------------------------------------------
 # 3. Set up the LLM and the agent
