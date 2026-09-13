@@ -18,7 +18,7 @@ from dotenv import load_dotenv
 from langchain_groq import ChatGroq
 from langchain_community.embeddings import FastEmbedEmbeddings
 from langchain_chroma import Chroma
-from ddgs import DDGS
+from langchain_community.tools import DuckDuckGoSearchRun
 from langchain_core.tools import tool
 from langchain.agents import create_agent
 
@@ -60,7 +60,7 @@ def web_search(query: str) -> str:
     information, and finding real product links when the user wants to
     buy something (e.g. 'buy ashwagandha powder online').
     """
-    ddgs = DDGS()
+    ddgs = DuckDuckGoSearchRun()
     results = list(ddgs.text(query, max_results=5))
     if not results:
         return "No search results found."
