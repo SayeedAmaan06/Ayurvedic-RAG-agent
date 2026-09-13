@@ -1,0 +1,12 @@
+langchain>=0.3.7
+langchain-groq>=0.2.1
+langchain-community>=0.3.7
+langchain-chroma>=0.1.4
+langchain-huggingface>=0.1.2
+sentence-transformers>=3.3.1
+chromadb>=0.5.20
+ddgs>=9.0.0
+fastapi>=0.115.5
+uvicorn>=0.32.1
+python-dotenv>=1.0.1
+pydantic>=2.9.2
